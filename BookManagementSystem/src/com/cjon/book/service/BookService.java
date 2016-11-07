@@ -116,6 +116,14 @@ public class BookService {
 		
 	}
 
+	public String myshareList(String id) {
+	
+		BookDAO dao = new BookDAO();
+		String result = dao.mymyshareList(id);	
+		
+		return result;
+	}
+
 }
 
 

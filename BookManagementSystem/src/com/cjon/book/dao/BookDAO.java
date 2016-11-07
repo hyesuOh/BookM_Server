@@ -23,7 +23,7 @@ public class BookDAO {
 		ResultSet rs = null;
 		String result = null;
 		try {
-			String sql = "select bisbn, bimgbase64, btitle, bauthor, bprice from book where btitle like ?";
+			String sql = "select bisbn, bimgbase64, btitle, bauthor, bprice, bshare from book where btitle like ?";
 			pstmt= con.prepareStatement(sql);
 			pstmt.setString(1, "%" + keyword + "%");
 			rs = pstmt.executeQuery();
@@ -35,6 +35,7 @@ public class BookDAO {
 				obj.put("title", rs.getString("btitle"));
 				obj.put("author", rs.getString("bauthor"));
 				obj.put("price", rs.getString("bprice"));
+				obj.put("share", rs.getString("bshare"));
 				arr.add(obj);
 			}
 			result = arr.toJSONString();
@@ -353,17 +354,40 @@ public class BookDAO {
 		boolean result = false;
 		
 		try {
+			
+			String sql = "select buser from book where bisbn=?"; // 선택한 도서 대출가능여부 확인
+			pstmt= con.prepareStatement(sql);
+			pstmt.setString(1,isbn);
+			rs = pstmt.executeQuery();
+			rs.next();
+			String ableshare = rs.getString("buser");
+			System.out.println(ableshare);
+			JSONObject obj = null;
+			
+			if(ableshare==id){
 				
-				String sql = "update book set bshare=?,buser=? where bisbn=?"; // 선택한 도서 대출가능여부 확인
-				pstmt= con.prepareStatement(sql);
+				System.out.println("0 : 반납가능->자신이빌린책");
+				//rs=null;ableshare.equals(id)==true
+				pstmt=null;
+				
+				String sql2 = "update book set bshare=?,buser=? where bisbn=?"; // 선택한 도서 반납가능여부 확인
+				pstmt= con.prepareStatement(sql2);
 				pstmt.setString(1,"0");
 				pstmt.setString(2,"");
 				pstmt.setString(3,isbn);
 				int count = pstmt.executeUpdate();
 				System.out.println(count);
+				
 				DBTemplate.commit(con);
 				result= true;
 				 
+			}else{
+				
+				System.out.println("반납불가");
+				DBTemplate.rollback(con);
+				result= false;
+			}
+		
 		} catch (Exception e) {
 			System.out.println(e);
 		} finally {
@@ -372,6 +396,7 @@ public class BookDAO {
 			DBTemplate.close(con);
 		} 
 		return result;
+		
 	}
 
 	public boolean insertComment(String isbn, String id, String comment) {
@@ -529,6 +554,39 @@ public class BookDAO {
 				obj.put("comment", rs.getString("c.bcomment"));
 				arr.add(obj);
 			}
+			result = arr.toJSONString();
+		} catch (Exception e) {
+			System.out.println(e);
+		} finally {
+			DBTemplate.close(rs);
+			DBTemplate.close(pstmt);
+			DBTemplate.close(con);
+		} 
+		return result;
+	}
+
+	public String mymyshareList(String id) {
+		
+		Connection con = DBTemplate.getConnection();
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
+		String result = null;
+		try {
+			String sql = "select btitle,bauthor,bisbn from book where buser=?";
+			pstmt= con.prepareStatement(sql);
+			pstmt.setString(1, id);
+			rs = pstmt.executeQuery();
+			JSONArray arr = new JSONArray();
+			result = arr.toJSONString();
+			while(rs.next()) {
+				JSONObject obj = new JSONObject();
+				obj.put("title", rs.getString("btitle"));
+				obj.put("author", rs.getString("bauthor"));
+				obj.put("isbn", rs.getString("bisbn"));
+			
+				arr.add(obj);
+			}
+			System.out.println("여긴 My comment view DAO");
 			result = arr.toJSONString();
 		} catch (Exception e) {
 			System.out.println(e);
